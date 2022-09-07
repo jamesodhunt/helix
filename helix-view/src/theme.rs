@@ -12,11 +12,14 @@ use toml::Value;
 
 pub use crate::graphics::{Color, Modifier, Style};
 
-pub static DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| {
-    toml::from_slice(include_bytes!("../../theme.toml")).expect("Failed to parse default theme")
+pub static DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| Theme {
+    name: "theme".into(),
+    ..toml::from_slice(include_bytes!("../../theme.toml")).expect("Failed to parse default theme")
 });
-pub static BASE16_DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| {
-    toml::from_slice(include_bytes!("../../base16_theme.toml"))
+
+pub static BASE16_DEFAULT_THEME: Lazy<Theme> = Lazy::new(|| Theme {
+    name: "base16_theme".into(),
+    ..toml::from_slice(include_bytes!("../../base16_theme.toml"))
         .expect("Failed to parse base 16 default theme")
 });
 
@@ -52,7 +55,13 @@ impl Loader {
         };
 
         let data = std::fs::read(&path)?;
-        toml::from_slice(data.as_slice()).context("Failed to deserialize theme")
+
+        let theme = Theme {
+            name: name.into(),
+            ..toml::from_slice(data.as_slice()).context("Failed to deserialize theme")?
+        };
+
+        Ok(theme)
     }
 
     pub fn read_names(path: &Path) -> Vec<String> {
@@ -96,8 +105,10 @@ impl Loader {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Theme {
+    name: String,
+
     // UI styles are stored in a HashMap
     styles: HashMap<String, Style>,
     // tree-sitter highlight styles are stored in a Vec to optimize lookups
@@ -147,6 +158,7 @@ impl<'de> Deserialize<'de> for Theme {
             scopes,
             styles,
             highlights,
+            ..Default::default()
         })
     }
 }
@@ -155,6 +167,10 @@ impl Theme {
     #[inline]
     pub fn highlight(&self, index: usize) -> Style {
         self.highlights[index]
+    }
+
+    pub fn name(&self) -> String {
+        self.name.to_string()
     }
 
     pub fn get(&self, scope: &str) -> Style {

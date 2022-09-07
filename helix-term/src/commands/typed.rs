@@ -725,16 +725,19 @@ fn theme(
             };
         }
         PromptEvent::Validate => {
-            let theme_name = args.first().with_context(|| "Theme name not provided")?;
-            let theme = cx
-                .editor
-                .theme_loader
-                .load(theme_name)
-                .with_context(|| "Theme does not exist")?;
-            if !(true_color || theme.is_16_color()) {
-                bail!("Unsupported theme: theme requires true color support");
+            if let Some(theme_name) = args.first() {
+                let theme = cx
+                    .editor
+                    .theme_loader
+                    .load(theme_name)
+                    .with_context(|| "Theme does not exist")?;
+                if !(true_color || theme.is_16_color()) {
+                    bail!("Unsupported theme: theme requires true color support");
+                }
+                cx.editor.set_theme(theme);
+            } else {
+                cx.editor.set_status(cx.editor.theme.name());
             }
-            cx.editor.set_theme(theme);
         }
     };
 
